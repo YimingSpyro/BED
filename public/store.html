@@ -1,0 +1,313 @@
+<!--
+DIT/FT/1B/06
+P1935318
+Li Yiming
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Snapsell</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+        integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://kit.fontawesome.com/5e61a4e927.js" crossorigin="anonymous"></script>
+
+
+    <script>
+        const baseUrl = "http://localhost:8081";
+        const token = localStorage.getItem("token");
+        const loggedInUserID = parseInt(localStorage.getItem("loggedInUserID"));
+
+        // Logout
+        function logout() {
+            localStorage.clear()
+            alert("logged out")
+        }
+
+        /* Function to add offer */
+        function offer(listingid) {
+            // prevent page reload
+            event.preventDefault();
+
+            /* Validate offer */
+            const offer = $("#offer" + listingid).val();
+            if (offer == "") {
+                alert("Offer cannot be null")
+                exit()
+            }
+
+            const fk_listing_id = listingid
+            const requestBody = {
+                "offer": offer,
+                "fk_listing_id": fk_listing_id,
+                "fk_offeror_id": loggedInUserID
+            };
+
+            axios.post(`${baseUrl}/listings/${listingid}/offers`, requestBody, { headers: { "Authorization": "Bearer " + token } })
+                .then((response) => {
+                    alert("offer has been made")
+                    location.reload()
+
+                })
+                .catch((error) => {
+                    console.log(error);
+                });
+        }
+
+        /* Function to like */
+        function like(id, title) {
+            // prevent page reload
+            event.preventDefault();
+
+            const name = title;
+            const fk_listing_id = id
+            const requestBody = {
+                "product_name": name,
+                "fk_liker_id": loggedInUserID,
+                "fk_listing_id": fk_listing_id
+            };
+            console.log(requestBody)
+
+            axios.post(`${baseUrl}/likes/`, requestBody)
+            location.reload()
+        }
+
+        // Search Function
+        function search() {
+
+
+            const keywords = $("#search").val();
+            const requestBody = {
+                "keywords": keywords
+            };
+
+            /* Clear display */
+            $("#listings").empty();
+
+            /* Get No. of likes */
+            axios.post(`${baseUrl}/search/`, requestBody)
+                .then((response) => {
+                    var listings = response.data;
+
+                    listings.forEach((listing) => {
+
+                        /* Get user info */
+                        axios.get(`${baseUrl}/users/${listing.fk_poster_id}`)
+                            .then((response) => {
+                                const user = response.data[0]
+                                /* Get No. of likes */
+                                axios.get(`${baseUrl}/listings/${listing.id}/likes/`)
+                                    .then((response) => {
+                                        const likes = (response.data).length;
+                                        const like = [listing.id, listing.title];
+
+                                        // Html stuff
+                                        const listingsHtml = `
+                    <div id="display" class="card"  style="margin-top: 2rem;"">
+                        
+                        <div class="card-body">
+                            <p class="card-text font-weight-bold">By ${user.username}</p>
+                            <img src="https://i.pinimg.com/originals/f8/27/ed/f827ed9a704146f65b96226f430abf3c.png" alt="Phone" class="img-thumbnail">
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">${listing.title}</p>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">$${listing.price}</p>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">${listing.description}</p>
+                        </div>
+                        <div class="card-footer text-muted d-flex justify-content-end">
+                            ${listing.created_at}
+                        </div>
+                        <div class="card-footer text-muted">
+                            <a href="mailto:" class="text-muted">Contact User</a>
+                            <div class=" d-flex justify-content-end">
+                                ${likes} &nbsp;&nbsp
+                                <button type = "button" class="btn btn-info" onclick = "like(${listing.id},${"'" + listing.title + "'"})">
+                                    <i class="far fa-heart"></i>
+                                </button>   
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-center">
+                            <form class="form-inline">
+                            <div class="form-group mx-sm-3 mb-2">
+                                <label for="offer" class="sr-only">offer</label>
+                                <input type="text" class="form-control" id="offer${listing.id}" placeholder="Your Offer">
+                            </div>
+                            <button type = "button" onclick = "offer(${listing.id})"class="btn btn-info" >offer</button>
+                        </form>
+                        </div>
+
+                    </div>
+                    `;
+
+                                        /* Create display */
+                                        $("#listings").append(listingsHtml);
+                                    })
+                                    .catch((error) => {
+                                        console.log(error);
+                                    });
+
+
+
+
+
+
+
+                            });
+                    })
+                        .catch((error) => {
+                            console.log(error);
+                        });
+
+
+                })
+                .catch((error) => {
+                    console.log(error);
+                });
+
+        }
+
+        // Display Page
+        if (token === null || isNaN(loggedInUserID)) {
+            window.location.href = "/login/";
+        }
+        else {
+
+            /* Get all Listings */
+            axios.get(`${baseUrl}/listings/`)
+                .then((response) => {
+                    var listings = response.data;
+
+                    listings.forEach((listing) => {
+
+                        /* Get user info */
+                        axios.get(`${baseUrl}/users/${listing.fk_poster_id}`)
+                            .then((response) => {
+                                const user = response.data[0]
+                                /* Get No. of likes */
+                                axios.get(`${baseUrl}/listings/${listing.id}/likes/`)
+                                    .then((response) => {
+                                        const likes = (response.data).length;
+                                        const like = [listing.id, listing.title];
+
+                                        // Html stuff
+                                        const listingsHtml = `
+                    <div id="display" class="card"  style="margin-top: 2rem;"">
+                        
+                        <div class="card-body">
+                            <p class="card-text font-weight-bold">By ${user.username}</p>
+                            <img src="https://i.pinimg.com/originals/f8/27/ed/f827ed9a704146f65b96226f430abf3c.png" alt="Phone" class="img-thumbnail">
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">${listing.title}</p>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">$${listing.price}</p>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">${listing.description}</p>
+                        </div>
+                        <div class="card-footer text-muted d-flex justify-content-end">
+                            ${listing.created_at}
+                        </div>
+                        <div class="card-footer text-muted">
+                            <a href="mailto:" class="text-muted">Contact User</a>
+                            <div class=" d-flex justify-content-end">
+                                ${likes} &nbsp;&nbsp
+                                <button type = "button" class="btn btn-info" onclick = "like(${listing.id},${"'" + listing.title + "'"})">
+                                    <i class="far fa-heart"></i>
+                                </button>   
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-center">
+                            <form class="form-inline">
+                            <div class="form-group mx-sm-3 mb-2">
+                                <label for="offer" class="sr-only">offer</label>
+                                <input type="text" class="form-control" id="offer${listing.id}" placeholder="Your Offer">
+                            </div>
+                            <button type = "button" onclick = "offer(${listing.id})"class="btn btn-info" >offer</button>
+                        </form>
+                        </div>
+
+                    </div>
+                    `;
+
+                                        /* Create display */
+                                        $("#listings").append(listingsHtml);
+                                    })
+                                    .catch((error) => {
+                                        console.log(error);
+                                    });
+                            })
+                            .catch((error) => {
+                                console.log(error);
+                            });
+
+
+
+
+
+
+                    });
+                })
+                .catch((error) => {
+                    console.log(error);
+                });
+
+        }
+
+
+
+
+
+    </script>
+</head>
+
+
+<body>
+    <div class="container">
+        <nav class="nav">
+            <a class="nav-link" href="/">Home</a>
+            <a class="nav-link" href="/store">Store</a>
+            <a class="nav-link" href="/" onclick=logout()>Log out</a>
+        </nav>
+
+        <h1>Store</h1>
+
+        <!-- Search -->
+        <div class="input-group mb-3" style="margin-top: 5%;">
+            <label for="search" class="sr-only">offer</label>
+            <input id="search" type="text" class="form-control" placeholder="Enter a product">
+            <div class="input-group-append">
+                <button class="btn btn-outline-secondary" type="button" onclick="search()">Search</button>
+            </div>
+        </div>
+
+        <!-- listings -->
+        <div id="listings" class="card-columns">
+
+        </div>
+
+    </div>
+
+
+</body>
+
+</html>

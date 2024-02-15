@@ -1,0 +1,227 @@
+<!--
+DIT/FT/1B/06
+P1935318
+Li Yiming
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Snapsell</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+        integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://kit.fontawesome.com/5e61a4e927.js" crossorigin="anonymous"></script>
+
+
+    <script>
+        const baseUrl = "http://localhost:8081";
+        const token = localStorage.getItem("token");
+        const loggedInUserID = parseInt(localStorage.getItem("loggedInUserID"));
+
+        // Logout
+        function logout() {
+            localStorage.clear()
+            alert("logged out")
+        }
+
+        // Function to add post
+        function post() {
+            // prevents the page from refreshing
+            event.preventDefault();
+            const title = $("#title").val();
+            const description = $("#description").val();
+            const price = $("#price").val();
+            const requestBody = {
+                "title": title,
+                "description": description,
+                "price": price,
+                "fk_poster_id": loggedInUserID
+            };
+            // create new listing
+            axios.post(`${baseUrl}/listings/`, requestBody, { headers: { "Authorization": "Bearer " + token } })
+            location.reload();
+        }
+
+        // Accept Offer
+        function acceptOffer() {
+            // not avalaible yet
+            alert("Offer Accepted")
+        }
+
+        // Edit Listing
+        function edit() {
+            // not avalaible yet
+            alert("Listing Updated")
+        }
+
+        // Delete Listing
+        function remove(id) {
+            // create new listing
+            axios.delete(`${baseUrl}/listings/${id}`, { headers: { "Authorization": "Bearer " + token } })
+            alert("Listing removed");
+            location.reload();
+        }
+
+        if (token === null || isNaN(loggedInUserID)) {
+            window.location.href = "/login/";
+        }
+        else {
+ 
+            /* Get Listings */
+            axios.get(`${baseUrl}/users/${loggedInUserID}/listings/`)
+                .then((response) => {
+                    var listings = response.data;
+
+                    listings.forEach((listing) => {
+                        /* Get No. of likes */
+                        axios.get(`${baseUrl}/listings/${listing.id}/likes/`)
+                            .then((response) => {
+                                const likes = (response.data).length;
+                                const like = [listing.id, listing.title];
+
+                                // Html stuff
+                                const listingsHtml = `
+                    <div id="display" class="card"  style="margin-top: 2rem;"">
+                        <div class="d-flex justify-content-end">
+                            <button type = "button" class="btn btn-warning" onclick = "edit(${listing.id})">
+                                <i class="far fa-edit"></i>
+                            </button>
+                            <button type = "button" class="btn btn-danger" onclick = "remove(${listing.id})">
+                                <i class="far fa-trash-alt"></i>
+                            </button>  
+                        </div>
+                        <div class="card-body">
+                            <img src="https://i.pinimg.com/originals/f8/27/ed/f827ed9a704146f65b96226f430abf3c.png" alt="Phone" class="img-thumbnail">
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">${listing.title}</p>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">$${listing.price}</p>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">${listing.description}</p>
+                        </div>
+                        <div class="card-footer text-muted d-flex justify-content-end">
+                            ${listing.created_at}
+                        </div>
+                        <div class="card-footer text-muted d-flex justify-content-end">
+                            ${likes} &nbsp;&nbsp
+                            <i class="far fa-heart" ></i>
+                        </div>
+
+                    </div>
+                    `;
+
+                                /* Create display */
+                                $("#listings").append(listingsHtml);
+                            })
+                            .catch((error) => {
+                                console.log(error);
+                            });
+
+                        /* Offers */
+                        axios.get(`${baseUrl}/listings/${listing.id}/offers/`)
+                            .then((response) => {
+                                const offers = response.data;
+                                offers.forEach((offer) => {
+                                    const offersHtml = `
+                                   
+                                    <div class="card" style="margin-top: 2rem; padding: 2rem;">
+                                        <p class="card-text">${listing.title}</p>
+                                        <p class="card-text text-success">${offer.offer}</p>
+                                        <button type = "button" class="btn btn-info" onclick = "acceptOffer()">
+                                            Accept
+                                        </button>       
+                                    </div>`;
+
+                                    $("#offers").append(offersHtml);
+                                });
+                            })
+                            .catch((error) => {
+                                console.log(error);
+                            });
+                    });
+                })
+                .catch((error) => {
+                    console.log(error);
+                });
+
+        }
+
+
+    </script>
+</head>
+
+
+<body>
+
+
+    <div class="container">
+        <nav class="nav">
+            <a class="nav-link" href="/">Home</a>
+            <a class="nav-link" href="/store">Store</a>
+            <a class="nav-link" href="/" onclick=logout()>Log out</a>
+        </nav>
+
+        <!-- Left side -->
+        <div class="row" style="margin-top: 2rem;">
+
+            <div class="col-md-8 col-xs-12">
+                <h1>Home</h1>
+                <h3>My Active Listings</h3>
+
+                <!-- listings -->
+                <div id="listings" class="card-columns">
+
+                </div>
+            </div>
+
+            <!-- Right side -->
+            <div class="col-md-4 col-xs-12">
+                <h2>Offers</h2>
+                <h3>Your offers</h3>
+
+                <!-- Offers -->
+                <ul id="offers" class="item-group" style="list-style: none; padding-left: 0;">
+                </ul>
+
+                <!-- New listing -->
+                <h3>Add a new Listing</h3>
+                <form id="listing-form">
+                    <div class="form-group">
+                        <label for="title">Your Item</label>
+                        <input type="text" class="form-control" id="title">
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <input type="text" class="form-control" id="description">
+                    </div>
+                    <div class="form-group">
+                        <label for="price">Price</label>
+                        <input type="text" class="form-control" id="price">
+                    </div>
+                    <button type="submit" onclick=post() id="submit-form" class="btn btn-primary">Add Listing</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+</body>
+
+</html>
